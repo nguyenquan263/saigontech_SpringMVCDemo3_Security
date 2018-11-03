@@ -1,5 +1,6 @@
 package vn.edu.saigontech.SpringMVCDemo.configurations;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Collections;
 
@@ -15,10 +16,11 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
+import com.google.gson.Gson;
+
 public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 	public JwtLoginFilter(String url, AuthenticationManager authManager) {
 		super(new AntPathRequestMatcher(url));
-		System.out.println(url);
 		setAuthenticationManager(authManager);
 
 	}
@@ -26,10 +28,19 @@ public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 			throws AuthenticationException, IOException, ServletException {
-		System.out.println(request.getParameter("username") + " " + request.getParameter("password"));
-		return getAuthenticationManager().authenticate(new UsernamePasswordAuthenticationToken(
-				request.getParameter("username"), request.getParameter("password"), Collections.emptyList()));
+//		System.out.println(request.getParameter("username") + " " + request.getParameter("password"));
+//
+//		return getAuthenticationManager().authenticate(new UsernamePasswordAuthenticationToken(
+//				request.getParameter("username"), request.getParameter("password"), Collections.emptyList()));
+		
+		LoginRequest logReq = getLoginRequest(request);
+		UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(logReq.getUsername(), logReq.getPassword());
+		return getAuthenticationManager().authenticate(authRequest);
+		
+	
 	}
+	
+	
 
 	@Override
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
@@ -42,5 +53,28 @@ public class JwtLoginFilter extends AbstractAuthenticationProcessingFilter {
 			AuthenticationException failed) throws IOException, ServletException {
 		TokenAuthenticationService.failAuthentication(response, failed.getMessage());
 	}
+	
+	private LoginRequest getLoginRequest(HttpServletRequest request) {
+        BufferedReader reader = null;
+        LoginRequest loginRequest = null;
+        try {
+            reader = request.getReader();
+            Gson gson = new Gson();
+            loginRequest = gson.fromJson(reader, LoginRequest.class);
+        } catch (IOException ex) {
+            logger.error(null, ex);
+        } finally {
+            try {
+                reader.close();
+            } catch (IOException ex) {
+                logger.error(null, ex);
+            }
+        }
+
+        if (loginRequest == null) {
+            loginRequest = new LoginRequest();
+        }
+        return loginRequest;
+    }
 
 }
